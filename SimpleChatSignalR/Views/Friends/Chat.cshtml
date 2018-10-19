@@ -1,0 +1,39 @@
+﻿@{
+    ViewBag.Title = "Chat";
+    var ServerAddress = @Request.Url.Scheme + "://" + @Request.Url.Authority + @Request.ApplicationPath.TrimEnd('/');
+    string id = (String)Session["id"];
+    string image = (String)Session["recvImage"];
+    string name = (String)Session["recvName"];
+
+    <script>
+        var recvId = @id;
+        var recvImage = "@image";
+        var recvName = "@name";
+    </script>
+}
+@*<div class="form-group">
+        <div class="col-xs-2">
+            <input type="checkbox" name="cbxSound" id="cbxSound" checked />
+        </div>
+        <div class="col-xs-6">
+            <label>
+                Enable sound
+            </label>
+        </div>
+    </div>*@
+<div class="jumbotron" style="background-color:white">
+    <div id="messagesDiv" class="col-xs-12">
+    </div>
+    <div class="form-group">
+        <label style="margin-left:-5%" class="col-xs-2">
+            Type:
+        </label>
+        <div class="col-xs-8">
+            <input type="text" class="form-control" value="" id="txtMessageInput" onkeydown="searchkey(this)" />
+        </div>
+
+        <div class="col-xs-2">
+            <button type="button" class="btn btn-default" style="background-color:#B8F9B8" id="btnSend"><span class="glyphicon glyphicon-send"></span></button>
+        </div>
+    </div>
+</div>

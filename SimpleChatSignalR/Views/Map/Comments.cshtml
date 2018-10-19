@@ -1,0 +1,106 @@
+﻿
+@{
+    ViewBag.Title = "Comments";
+}
+
+<h2>Comments</h2>
+
+<div class="form-group">
+    <button style='float:right; margin:2%; margin-right:0%; color:forestgreen' type='button' class='btn btn-default' onclick='AddComment()'>Add comment</button>
+</div>
+<div id="comments"></div>
+
+    <div class="modal modal-scroll fade" id="CommentModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog modal-sm" role="document">
+            <div class="modal-content" style="background-color: #5cb85c">
+                <div class="modal-header" style="background-color: white; color: #5cb85c" id="headerModal">
+                </div>
+                <div class="modal-body" style="background-color: #5cb85c; color: white">
+                    <div id="editDetails" @*style="text-align:center" *@></div>
+                </div>
+                <div id="modalEdit" class=" modal-footer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        window.onload = function Comments() {
+            var comment = JSON.parse('@Html.Raw(ViewBag.comments)');
+            console.log(comment);
+            for (var i = 0; i < comment.length; i++) {
+                console.log(comment[i].Type);
+                if (comment[i].Type == "image     ") {
+                    $("#comments").append("<div class='col-xs-10' style='background-color:forestgreen; margin:2%; padding:2%; border-radius: 2% / 10%'>" +
+                        "<div class='col-xs-12'><img style='height:50px; width:50px' src='../Files/" + comment[i].User.Image + "'>" +
+                        "<label style='margin-left:5%' >" + comment[i].User.Name + " " + comment[i].User.Surname + "</label></div>" +
+                        "<div class='col-xs-12'><img style='height:70px; width:70px; margin-top:2%' src='../Files/" + comment[i].Comment + "'></div></div>");
+                }
+                else {
+                    $("#comments").append("<div class='col-xs-10' style='background-color:forestgreen; margin:2%; padding:2%; border-radius: 2% / 10%'>" +
+                        "<div class='col-xs-12'><img style='height:50px; width:50px' src='../Files/" + comment[i].User.Image + "'>" +
+                        "<label style='margin-left:5%' >" + comment[i].User.Name + " " + comment[i].User.Surname + "</label></div>" +
+                        "<div class='col-xs-12'><label style='margin-top:2%'>" + "   " + comment[i].Comment + "</label></div></div>");
+                }
+            }
+        };
+
+
+        function AddComment() {
+            $("#headerModal").empty();
+            $("#editDetails").empty();
+            $("#modalEdit").empty();
+            $("#headerModal").append('<button type="button" class="close" data-dismiss="modal" onclick="ModalClose()" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
+                '<h4>Add comment for this place</h4>');
+            $("#editDetails").append("<p><input type='text' id='text' class='col-sm-8' style='margin-left:10%'/></label></p>");
+            $("#editDetails").append("<input type=file size='60' id='file' style='color:white' />");
+            $("#modalEdit").append("<input style='float:right; margin:2%; color:forestgreen' type='button' class='btn btn-default' onclick='AddComm()' value='Add'/>");
+            $("#CommentModal").modal("show");
+        }
+
+        function AddComm() {
+            var formData = new FormData();
+            var file = $("#file")[0].files[0];
+            var text = $("#text").val();
+            var id = "@ViewBag.place";
+            if (file != undefined) {
+                formData.append($("#file")[0].files[0].name, $("#file")[0].files[0]);
+            }
+            formData.append("place_id", id);
+            formData.append("text", text);
+
+
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                url: "/Map/AddComment",
+                data: formData,
+                chache: false,
+                enctype: 'multipart/form-data',
+                processData: false,  // do not process the data as url encoded params
+                contentType: false,
+                success: function (comment) {
+                    for (var i = 0; i < comment.length; i++) {
+                        if (comment[i].Type == "image     ") {
+                            $("#comments").append("<div class='col-xs-10' style='background-color:forestgreen; margin:2%; padding:2%; border-radius: 2% / 10%'>" +
+                                "<div class='col-xs-12'><img style='height:50px; width:50px' src='../Files/" + comment[i].User.Image + "'>" +
+                                "<label style='margin-left:5%' >" + comment[i].User.Name + " " + comment[i].User.Surname + "</label></div>" +
+                                "<div class='col-xs-12'><img style='height:70px; width:70px; margin-top:2%' src='../Files/" + comment[i].Comment + "'></div></div>");
+                        }
+                        else {
+                            $("#comments").append("<div class='col-xs-10' style='background-color:forestgreen; margin:2%; padding:2%; border-radius: 2% / 10%'>" +
+                                "<div class='col-xs-12'><img style='height:50px; width:50px' src='../Files/" + comment[i].User.Image + "'>" +
+                                "<label style='margin-left:5%' >" + comment[i].User.Name + " " + comment[i].User.Surname + "</label></div>" +
+                                "<div class='col-xs-12'><label style='margin-top:2%'>" + "   " + comment[i].Comment + "</label></div></div>");
+                        }
+                    }
+                    ModalClose();
+                }
+            });
+        }
+
+        function ModalClose() {
+            $("#CommentModal").modal("hide");
+        }
+    </script>
+

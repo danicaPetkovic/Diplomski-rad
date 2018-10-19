@@ -1,0 +1,511 @@
+﻿@{
+    ViewBag.Title = "Index";
+    var ServerAddress = @Request.Url.Scheme + "://" + @Request.Url.Authority + @Request.ApplicationPath.TrimEnd('/');
+
+    <script>
+        var places = JSON.parse('@Html.Raw(ViewBag.places)');
+        var intervalId;
+        var markersFriends = [];
+        var markers = [];
+        var markersPlaces = [];
+        var map;
+    </script>
+}
+
+<style>
+    /* The container */
+    .container {
+        display: block;
+        position: relative;
+        padding-left: 35px;
+        cursor: pointer;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+
+        /* Hide the browser's default checkbox */
+        .container input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+    /* Create a custom checkbox */
+    .checkmark {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 20px;
+        width: 20px;
+        background-color: #eee;
+    }
+
+    /* On mouse-over, add a grey background color */
+    .container:hover input ~ .checkmark {
+        background-color: white;
+    }
+
+    /* When the checkbox is checked, add a blue background */
+    .container input:checked ~ .checkmark {
+        background-color: forestgreen;
+    }
+
+    /* Create the checkmark/indicator (hidden when not checked) */
+    .checkmark:after {
+        content: "";
+        position: absolute;
+        display: none;
+    }
+
+    /* Show the checkmark when checked */
+    .container input:checked ~ .checkmark:after {
+        display: block;
+    }
+
+    /* Style the checkmark/indicator */
+    .container .checkmark:after {
+        left: 9px;
+        top: 5px;
+        width: 5px;
+        height: 10px;
+        border: solid white;
+        border-width: 0 3px 3px 0;
+        -webkit-transform: rotate(45deg);
+        -ms-transform: rotate(45deg);
+        transform: rotate(45deg);
+    }
+</style>
+
+<div id="map" style="height:500px; width:350px; background-color:aqua"></div>
+<div class="form-group" style="margin-top:2%">
+    <label class="container">
+        Show friends locations
+        <input type="checkbox" id="checkbox">
+        <span class="checkmark"></span>
+    </label>
+    <button type="button" onclick="OpenMainPage()" class="btn btn-default" style="background-color:forestgreen; color:white; margin-top:2%">Change interest</button>
+</div>
+
+
+<div class="modal modal-scroll fade" id="MapModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" style="padding-top:25%">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content" style="background-color: #5cb85c">
+            <div class="modal-header" style="background-color: white; color: #5cb85c" id="headerModal">
+            </div>
+            <div class="modal-body" style="background-color: #5cb85c; color: white">
+                <div id="editDetails" @*style="text-align:center" *@></div>
+            </div>
+            <div id="modalEdit" class=" modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    worker = new Worker('@Url.Content("~/Scripts/")' + 'mapWorker.js');
+    var time;
+
+    function StartWorker() {
+        //markersPlaces[0] = { lat: 43.3175278, lng: 21.894537 };
+        worker.postMessage(markersPlaces);
+    }
+
+    worker.onmessage = function (e) {
+        console.log(e.data);
+        if (e.data == "promasaj")
+            return;
+        else 
+            Score(e.data);
+    }
+
+    setInterval(StartWorker, 5000);
+
+    function deleteMarkers() {
+        for (var i = 0; i < markersFriends.length; i++) {
+            markersFriends[i].setMap(null);
+        }
+        markersFriends = [];
+    }
+
+    function initMap() {
+        var mapOptions = {
+            center: new google.maps.LatLng(43.331654199999996, 21.8923471),
+            zoom: 14,
+            mapTypeId: google.maps.MapTypeId.TERRAIN
+        }
+
+        map = new google.maps.Map(document.getElementById("map"), mapOptions);
+
+        infoWindow = new google.maps.InfoWindow;
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                var pos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                markersPlaces.push(pos);
+                var image = {
+                    url: "../Markers/free-4-blue.png",
+                    scaledSize: new google.maps.Size(30, 30), // scaled size
+                    origin: new google.maps.Point(0, 0), // origin
+                    anchor: new google.maps.Point(0, 0) // anchor
+                }
+
+                var myLocation = new google.maps.Marker({
+                    position: pos,
+                    map: map,
+                    icon: image
+                });
+
+
+                       /* var me = new google.maps.LatLng(pos.lat, pos.lng);
+                var dest = new google.maps.LatLng(43.3122, 21.9238);
+
+                        var directionDisplay = new google.maps.DirectionsRenderer();
+                        var directionService = new google.maps.DirectionsService();
+                        directionDisplay.setMap(map);
+
+                        var request = {
+                            origin: me,
+                            destination: dest,
+                            travelMode: 'WALKING'       //DRIVING
+                        };
+
+                        directionService.route(request, function (result, status) {
+                            if (status == "OK") {
+                                directionDisplay.setDirections(result);
+                            }
+                        });
+                */
+
+
+                var notificationHub = $.connection.notificationHub;
+                $.connection.hub.qs = { "userId": userId };
+                $.connection.hub.start().done(function () {
+                    console.log("Notification hub started Map");
+                    var pos;
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(function (position) {
+                            pos = {
+                                lat: position.coords.latitude,
+                                lng: position.coords.longitude
+                            };
+                            notificationHub.server.setPosition(pos.lat, pos.lng);
+                        });
+                    }
+                });
+
+                function refreshPosition() {
+                    var pos;
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(function (position) {
+                            pos = {
+                                lat: position.coords.latitude,
+                                lng: position.coords.longitude
+                            };
+
+                            markersPlaces[0] = pos;
+
+                            if ($("#checkbox")[0].checked) {
+                                notificationHub.server.updateFriendsLocations(userId, pos.lat, pos.lng);
+                            }
+                            else {
+                                deleteMarkers();
+                                notificationHub.server.updateLocation(userId, pos.lat, pos.lng);
+                            }
+                        })
+                    }
+                }
+
+                notificationHub.client.updateUsersPositions = function (userPositions) {
+                    var positions = jQuery.parseJSON(userPositions);
+
+                    var imageFriends = {
+                        url: "../Markers/free-4-green.png",
+                        scaledSize: new google.maps.Size(30, 30), // scaled size
+                        origin: new google.maps.Point(0, 0), // origin
+                        anchor: new google.maps.Point(0, 0) // anchor
+                    }
+
+                    var push;
+                    if (markersFriends.length == 0) {
+                        push = true;
+                    } else push = false;
+
+                    var index = 0;
+                    var notFinded = true;
+                    while (notFinded) {
+                        if (positions[index].Id_user == userId)
+                            notFinded = false;
+                        else index++;
+                    }
+                    positions.splice(index, 1);
+
+                    for (var i = 0; i < positions.length; i++) {
+                        var marker;
+                        var LatLng;
+                        LatLng = new google.maps.LatLng(positions[i].Latitude, positions[i].Longitude);
+                        if (push) {
+                            marker = new google.maps.Marker({
+                                position: LatLng,
+                                map: map,
+                                icon: imageFriends,
+                                title: positions[i].Name + " " + positions[i].Surname
+                            });
+                            markersFriends.push(marker);
+
+                            var info = new google.maps.InfoWindow({
+                                content: contentString
+                            });
+
+                            marker.addListener('click', function () {
+                                var title = this.title;
+                                var i = 0;
+
+                                while (title != positions[i].Name + " " + positions[i].Surname) {
+                                    i++;
+                                }
+
+                                contentString = '<div id="content">' +
+                                    '<h4 id="firstHeading" class="firstHeading">' + positions[i].Name + " " + positions[i].Surname + '</h1>' +
+                                    '<div id="bodyContent">' +
+                                    "<img style='height:50px; width:50px' src='../Files/" + positions[i].Image + "'>" +
+                                    '</div>';
+                                info.setContent(contentString);
+                                info.open(this.map, this);
+                            })
+                        } else {
+                            markersFriends[i].setPosition(LatLng);
+                        }
+                    }
+                }
+
+                setInterval(refreshPosition, 5000);
+
+                var imageLandmarks = {
+                    url: "../Markers/touristattraction.png",
+                    scaledSize: new google.maps.Size(30, 30), // scaled size
+                    origin: new google.maps.Point(0, 0), // origin
+                    anchor: new google.maps.Point(0, 0) // anchor
+                }
+
+                var imageMuseums = {
+                    url: "../Markers/envato-marker.png",
+                    scaledSize: new google.maps.Size(30, 30), // scaled size
+                    origin: new google.maps.Point(0, 0), // origin
+                    anchor: new google.maps.Point(0, 0) // anchor
+                }
+
+                var imageRestaurants = {
+                    url: "../Markers/restaurants.png",
+                    scaledSize: new google.maps.Size(30, 30), // scaled size
+                    origin: new google.maps.Point(0, 0), // origin
+                    anchor: new google.maps.Point(0, 0) // anchor
+                }
+
+                var imageOthers = {
+                    url: "../Markers/park.png",
+                    scaledSize: new google.maps.Size(30, 30), // scaled size
+                    origin: new google.maps.Point(0, 0), // origin
+                    anchor: new google.maps.Point(0, 0) // anchor
+                }
+
+                var imagePlace;
+                var marker;
+                var infowindow;
+                var contentString;
+
+                for (var i = 0; i < places.length; i++) {
+                    if (places[i].Category == "landmark") {
+                        imagePlace = imageLandmarks;
+                    } else if (places[i].Category == "museum") {
+                        imagePlace = imageMuseums;
+                    } else if (places[i].Category == "restaurant") {
+                        imagePlace = imageRestaurants;
+                    } else if (places[i].Category == "other") {
+                        imagePlace = imageOthers;
+                    }
+
+                    myLatlng = { lat: places[i].Latitude, lng: places[i].Longitude };
+                    marker = new google.maps.Marker({
+                        position: myLatlng,
+                        map: map,
+                        icon: imagePlace,
+                        title: places[i].Name,
+                    });
+                    markersPlaces.push(myLatlng);
+                    markers.push(marker);
+
+                    infowindow = new google.maps.InfoWindow({
+                        content: contentString
+                    });
+
+                    marker.addListener('click', function () {
+                        var title = this.title;
+                        var i = 0;
+
+                        while (title != places[i].Name) {
+                            i++;
+                        }
+
+                        contentString = '<div id="content">' +
+                            '<h4 id="firstHeading" class="firstHeading">' + places[i].Name + '</h1>' +
+                            '<div id="bodyContent">' +
+                            "<img style='height:50px; width:50px' src='../Files/" + places[i].Image + "'>" +
+                            '<p><b>' + places[i].Name + '</b>, ' + places[i].Description + '</p>' +
+                            '<div class"col-xs-6"><p><button type="button" onclick="OpenComments(' + places[i].Id_place + ')" style="background-color:forestgreen; color:white" class="btn btn-default">Comments</button></p></div>'
+                            + '<div class"col-xs-6"><p><button type="button" onclick="Directions(' + i + ')" style="background-color:forestgreen; color:white" class="btn btn-default">Directions</button></p></div>'
++
+                        '</div>';
+                        infoWindow.setContent(contentString);
+                        infoWindow.open(this.map, this);
+                    })
+                }
+
+               /* $("#editDetails").append("<p>These places are the most interesting in this city. More you see, the more points you get and more information about the lcation.</p>");
+                $("#editDetails").append("<p>The radius is about 1km from you, good luck managing tasks</p>");
+                $("#modalEdit").append("<button style='color:forestgreen; float:right' class='btn btn-default' onclick='ModalClose()'>OK</button>");
+                $("#MapModal").modal("show");*/
+
+                var cityCircle = new google.maps.Circle({
+                    strokeColor: '#7ED1FC',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: '#ABDAF2',
+                    fillOpacity: 0.35,
+                    map: map,
+                    center: pos,
+                    radius: 1000                    //1km radius
+                });
+
+            }, function () {
+                handleLocationError(true, infoWindow, map.getCenter());
+            });
+        } else {
+            // Browser doesn't support Geolocation
+            handleLocationError(false, infoWindow, map.getCenter());
+        }
+    }
+
+    function OpenMainPage() {
+        window.location.replace("/Home/Main_page");
+    }
+
+    function handleLocationError(browserHasGeolocation, infoWindow, pos) {
+        infoWindow.setPosition(pos);
+        infoWindow.setContent(browserHasGeolocation ?
+            'Error: The Geolocation service failed.' :
+            'Error: Your browser doesn\'t support geolocation.');
+        infoWindow.open(map);
+
+    }
+
+    function ModalClose() {
+        $("#editDetails").empty();
+        $("modalEdit").empty();
+        $("#MapModal").modal("hide");
+    }
+
+    function OpenComments(id) {
+        window.location.replace("/Map/Comments?id=" + id);
+    }
+
+    function Score(location) {
+        var i = 1;
+        var success = true;
+        var title;
+        while (success && i < markersPlaces.length) {
+            if (markersPlaces[i].lat == location.lat && markersPlaces[i].lng == location.lng) {
+                title = markers[i - 1].title;
+                ///markers[i-1].setMap(null);
+                var title = markers[i - 1].getTitle();
+                markers[i - 1].setTitle(title + " visited");
+                markers.splice(i - 1, 1);
+                markersPlaces.splice(i, 1);
+            }
+            i++;
+        }
+
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            url: "/Map/ScorePlace",
+            data: { "title" : title },
+            chache: false,
+            success: function (data) {
+                if (markers.length == 0) {
+                    $("#headerModal").empty();
+                    $("#editDetails").empty();
+                    $("#modalEdit").empty();
+                    $("#headerModal").append('<button type="button" class="close" data-dismiss="modal" onclick="ModalClose()" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
+                        '<h2>Excellent</h2');
+                    $("#editDetails").append("<label class='col-sm-8' style='margin-left:10%'>Congratulations, you've reached all destination. It's was nice exploring city with you :)</label>");
+                    $("#modalEdit").append("<input style='float:right; margin:2%; color:forestgreen' type='button' class='btn btn-default' onclick='ModalClose()' value='OK'/>");
+                    $("#MapModal").modal("show");
+                }
+                else {
+                    $("#headerModal").empty();
+                    $("#editDetails").empty();
+                    $("#modalEdit").empty();
+                    $("#headerModal").append('<button type="button" class="close" data-dismiss="modal" onclick="ModalClose()" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
+                        '<h2>Excellent</h2');
+                    $("#editDetails").append("<label class='col-sm-8' style='margin-left:10%'>Congratulations, you've reached the destination. You earned " + data.Points + " points, keep going, visit all places on the map! :)</label>");
+                    $("#editDetails").append("<label>Do you want to add some comment?</label>");
+                    $("#modalEdit").append("<button style='float:right; margin:2%; color:forestgreen' type='button' class='btn btn-default' onclick='AddComment(" + data.Id_place + ")'>Yes</btton>");
+                    $("#modalEdit").append("<button style='float:right; margin:2%; color:forestgreen' type='button' class='btn btn-default' onclick='ModalClose()'>No</button>");
+                    $("#MapModal").modal("show");
+                }
+
+            },
+            error: function (err) {
+            }
+        });
+    }
+
+    function AddComment(id) {
+        window.location.replace("/Map/Comments?id=" + id);
+    }
+
+    function Directions(i) {
+        var lat = places[i].Latitude;
+        var lng = places[i].Longitude;
+        //var map = $("#map")[0];
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                var pos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+
+                var me = new google.maps.LatLng(pos.lat, pos.lng);
+                var dest = new google.maps.LatLng(lat, lng);
+
+                var directionDisplay = new google.maps.DirectionsRenderer();
+                var directionService = new google.maps.DirectionsService();
+                directionDisplay.setMap(map);
+
+                var request = {
+                    origin: me,
+                    destination: dest,
+                    travelMode: 'DRIVING'       //može i WALKING
+                };
+
+                directionService.route(request, function (result, status) {
+                    if (status == "OK") {
+                        ModalClose();
+                        directionDisplay.setDirections(result);
+                    }
+                });
+            });
+        }
+
+    }
+</script>
+
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsud6Z9gi7iJQwVyLkgFKp2wjny5vGW9o&callback=initMap"></script>
+

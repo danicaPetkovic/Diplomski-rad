@@ -1,0 +1,68 @@
+﻿
+@{
+    ViewBag.Title = "Scores";
+}
+
+<h4>Best scores</h4>
+
+<div id="worldScore"></div>
+<h4>Friends scores</h4>
+<div id="friendsScore"></div>
+<script>
+    function ShowScores() {
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            url: "/Home/WorldScore",
+            chache: false,
+            success: function (data) {
+                var count;
+                if (data.length > 5) {
+                    count = 5;
+                }
+                else count = data.length;
+                var points = 15;
+
+                for (var i = 0; i < count; i++) {
+                    $("#worldScore").append("<div class='col-xs-10' style='background-color:forestgreen; margin:2%; border-radius: 2% / 10%'>" +
+                        "<div class='col-xs-3'><img style='height:50px; border-radius: 50%/50%; width:50px' src='../Files/" + data[i].Image + "'></div>" +
+                        "<div class='col-xs-6'><label style='margin-left:5%' >" + data[i].Name + " " + data[i].Surname + "  " + "</label></div>" +
+                        "<div class='col-xs-3'><label>  Score: " + points + "</label></div></div>");
+
+                    points = points - i - 1;
+                }
+            },
+            error: function (err) {
+            }
+        });
+    }
+
+    function ShowFriendsScores() {
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            url: "/Home/FriendsScore",
+            chache: false,
+            success: function (data) {
+                var count;
+                if (data.length > 5) {
+                    count = 5;
+                }
+                else count = data.length;
+                for (var i = 0; i < count; i++) {
+                    $("#friendsScore").append("<div class='col-xs-10' style='background-color:#569356; margin:2%; border-radius: 2% / 10%'>" +
+                        "<div class='col-xs-3'><img style='height:50px; border-radius: 50%/50%; width:50px' src='../Files/" + data[i].Image + "'></div>" +
+                        "<div class='col-xs-6'><label style='margin-left:5%' >" + data[i].Name + " " + data[i].Surname + "  " + "</label></div>" +
+                        "<div class='col-xs-3'><label>  Score: " + data[i].Points + "</label></div></div>");
+                }
+            },
+            error: function (err) {
+            }
+        });
+    }
+
+    window.onload = function () {
+        ShowScores();
+        ShowFriendsScores();
+    }
+</script>

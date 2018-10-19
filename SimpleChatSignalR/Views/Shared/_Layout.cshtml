@@ -1,0 +1,280 @@
+﻿<!DOCTYPE html>
+@using SimpleChatSignalR.Models
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - My ASP.NET Application</title>
+    @Styles.Render("~/Content/css")
+    @Scripts.Render("~/bundles/modernizr")
+</head>
+
+
+<body style="background-color:#0D0F0C">
+    <style>
+    </style>
+
+    @if (ViewBag.Title != "Home-Index")
+    {
+        UserView login = null;
+
+        if (Session["User"] != null)
+        {
+            login = (UserView)Session["User"];
+            <script>
+                var chat = "@ViewBag.Title";
+                var userId = @login.Id_user;
+                var userImage = "@login.Image";
+            </script>
+        }
+    }
+    <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                @if (Session["User"] != null)
+                {
+                    <ul class="nav navbar-nav" style="float:right; margin-right:2%">
+                        <li style="display: inline-block">@Html.ActionLink(((UserView)Session["User"]).Name + ", score: " + ((UserView)Session["User"]).Points, "Index", "Home")</li>
+                        <li style="display: inline-block">
+                            <span id="noti" class="noti glyphicon glyphicon-envelope"><span id="count" class="count"></span></span>
+                            <div class="noti-content">
+                                <div class="noti-top-arrow">
+                                    <ul id="notiContent"></ul>
+                                </div>
+                            </div>
+                        </li>
+                        <li style="display: inline-block">@Html.ActionLink(" ", "Scores", "Home", null, new { @class = "glyphicon glyphicon-th-list" })</li>
+                        <li style="display: inline-block">@Html.ActionLink(" ", "Index", "Map", null, new { @class = "glyphicon glyphicon-pushpin" })</li>
+                        <li style="display: inline-block">@Html.ActionLink(" ", "Index", "Friends", null, new { @class = "glyphicon glyphicon-user" })</li>
+                        <li style="display: inline-block">@Html.ActionLink(" ", "About", "Home", null, new { @class = "glyphicon glyphicon-exclamation-sign" })</li>
+                        <li style="display: inline-block">@Html.ActionLink(" ", "LogOut", "Home", null, new { @class = "glyphicon glyphicon-log-out" })</li>
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="container body-content">
+        @RenderBody();
+    </div>
+
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/bootstrap")
+
+    @Scripts.Render("~/Scripts/jquery.signalR-2.2.2.js")
+    @Scripts.Render("~/signalr/hubs")
+    @Scripts.Render("~/Scripts/chatSignalR.js")
+    @*@RenderSection("scripts", required: false)*@
+    <style type="text/css">
+        .noti-content {
+            position: fixed;
+            right: 100px;
+            background: forestgreen;
+            border-radius: 4px;
+            top: 8%;
+            width: 60%;
+            border: 1px solid #9E988B;
+            display: none;
+        }
+
+        ul#notiContent {
+            max-height: 10%;
+            padding-left: 20px;
+        }
+
+            ul#notiContent li {
+                margin: 3px;
+                padding: 6px;
+                background: #FFF;
+                border-radius: 4px;
+            }
+
+        .noti-top-arrow {
+            border-color: transparent;
+            border-style: dashed dashed solid;
+            border-width: 0 0.5px 0.5px;
+        }
+
+        span.noti {
+            color: white;
+        }
+
+        span.count {
+            position: relative;
+            top: -3px;
+        }
+
+        /* Popup container - can be anything you want */
+        .popup {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+            /* The actual popup */
+            .popup .popuptext {
+                visibility: hidden;
+                width: 160px;
+                background-color: #555;
+                color: #fff;
+                text-align: center;
+                border-radius: 6px;
+                padding: 8px 0;
+                position: absolute;
+                z-index: 1;
+                bottom: 125%;
+                left: 50%;
+                margin-left: -80px;
+            }
+
+                /* Popup arrow */
+                .popup .popuptext::after {
+                    content: "";
+                    position: absolute;
+                    top: 100%;
+                    left: 50%;
+                    margin-left: -5px;
+                    border-width: 5px;
+                    border-style: solid;
+                    border-color: #555 transparent transparent transparent;
+                }
+
+            /* Toggle this class - hide and show the popup */
+            .popup .show {
+                visibility: visible;
+                -webkit-animation: fadeIn 1s;
+                animation: fadeIn 1s;
+            }
+    </style>
+</body>
+</html>
+
+<script>
+    $(function () {
+        $("#noti").click(function (e) {
+            e.stopPropagation();
+            $(".noti-content").show();
+
+            var count = 0;
+            if ($("#count")[0].innerText != "") {
+                $("#count")[0].style.color = "#FF0000";
+                $("#noti")[0].style.color = "#FF0000";
+                count = parseInt($("#count")[0].innerText);
+            } else {
+                $("#count")[0].style.color = "#FFFFFF";
+                $("#noti")[0].style.color = "#FFFFFF";
+            }
+
+            if (count > 0) {
+                $(".noti-content").show();
+            }
+            $("span.count", this).html("&nbsp;");
+        })
+
+        //hide notification
+        $("html").click(function () {
+            $(".noti-content").hide();
+        })
+
+        function updateNotification(msgObjJSON) {
+            var message = jQuery.parseJSON(msgObjJSON)
+
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: { "userId": message.Id_send_user },
+                url: '@Url.Content("~/Home/")' + "GetImage",
+                success: function (data) {
+                    $("#notiContent").append($("<li onclick='OpenChat(" + message.Id_send_user + ")'><img src='@Url.Content("~/Files/")" + data + "' style='height:40px; width:40px; border-radius: 50% / 50%' /> " + " " + message.message + "</li>"));
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+
+        //signalr js code for start hb and send recieve notification
+        var notificationHub = $.connection.notificationHub;
+        $.connection.hub.qs = { "userId": userId };
+        //$.connection.hub.start().done(function () {
+        //    console.log("Notification hub started");
+        //});
+
+        notificationHub.client.notify = function (message) {
+            if ("@ViewBag.Title" != "Chat") {
+                var count;
+
+                if ($("#count")[0].innerText == "")
+                    count = 0;
+                else
+                    count = parseInt($("#count")[0].innerText);
+
+                count++;
+                $("#count")[0].innerText = "" + count;
+                $("#count")[0].style.color = "#FF0000";
+                $("#noti")[0].style.color = "#FF0000";
+
+                updateNotification(message);
+            }
+        }
+
+        notificationHub.client.reciveFriendRequest = function (friend) {
+            console.log(friend);
+
+            var count;
+
+            if ($("#count")[0].innerText == "")
+                count = 0;
+            else
+                count = parseInt($("#count")[0].innerText);
+
+            count++;
+            $("#count")[0].innerText = "" + count;
+            $("#count")[0].style.color = "#FF0000";
+            $("#noti")[0].style.color = "#FF0000";
+            console.log(count);
+
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: { "userId": jQuery.parseJSON(friend) },
+                url: '@Url.Content("~/Home/")' + "GetFriend",
+                success: function (data) {
+                    console.log(data);
+                    $("#notiContent").append($("<li><img src='@Url.Content("~/Files/")" + data.Image + "' style='height:40px; width:40px; border-radius: 50% / 50%' /> " + " " + data.Name + " " + data.Surname + " Friend request " +
+                        "<button class='btn btn-success' onclick='AddFriendRequest(" + friend + ")'>Accept</button> <button class='btn btn-error' onclcik='DeclineFriend()'>Decline</button>" + "</li>"));
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+    });
+
+    function DeclineFriend() {
+        $("#notiContent").empty();
+        $("#count")[0].innerText = "";
+        $("#count")[0].style.color = "#999999";
+        $("#noti")[0].style.color = "#999999";
+    }
+
+    function AddFriendRequest(id) {
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: { "id": id },
+            url: "/Friends/AddFriend",
+            chache: false,
+            success: function (data) {
+            }
+        })
+    }
+
+    function OpenChat(usersFriend) {
+        recvImage = "";
+        window.location.replace('@Url.Content("~/Friends/")' + "Chat?id=" + usersFriend + "&image=" + recvImage);
+    }
+</script>

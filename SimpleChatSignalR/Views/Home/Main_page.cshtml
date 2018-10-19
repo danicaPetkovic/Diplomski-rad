@@ -1,0 +1,111 @@
+﻿@using SimpleChatSignalR.Models
+@{
+    ViewBag.Title = "Main_page";
+
+    UserView login = null;
+    if (Session["User"] != null)
+    {
+        login = (UserView)Session["User"];
+    }
+}
+
+<div class="form-group" style="color:forestgreen; padding-top:10px">
+    <label>Welcome @login.Name, what do tou want to explore? You can pick more than one:</label>
+
+    <div class="checkbox">
+        <label><input type="checkbox" id="landmarks">Landmarks</label>
+    </div>
+    <div class="checkbox">
+        <label><input type="checkbox" id="clubs">Bars and clubs (night life)</label>
+    </div>
+    <div class="checkbox disabled">
+        <label><input type="checkbox" id="museums">Museums</label>
+    </div>
+    <div class="checkbox disabled">
+        <label><input type="checkbox" id="interesting">Other interesting places</label>
+    </div>
+</div>
+
+<div class="form-group">
+    <div class="col-sm-4" style="float:right; margin-top:-15%; margin-left:55%; color:white; font-size:9px; float:right">
+        <label>Find people that also using this app. You could sighseeing together, chat, exchange expiriance, and have fun</label>
+    </div>
+</div>
+
+<div style="padding-top:1%;
+    background-image: url('../../Images/banovina.jpg') !important;
+    background-size: 100%;
+    background-repeat: no-repeat;
+    padding-bottom:40%;
+    background-attachment:scroll;">
+</div>
+
+<div class="form-group">
+    <div class="col-sm-8" style="color:white; font-size:9px; margin-right:30%">
+        <label>Mark on map places that you love and share with others your excitement of the city</label>
+    </div>
+</div>
+
+<div class="form-group">
+    <div class="col-sm-8" style="color:forestgreen; font-size:9px; float:right; margin-left:20%; margin-bottom:5%">
+        <label>Every place has his value, more places tou visit, more points you get. By answering on questions, you are learning something about the city and collecting points (reword). The person who has the heighest score, wins!</label>
+    </div>
+</div>
+
+<div style="margin-left:40%; margin-right:40%">
+    <input type="button" value="Lets start!" onclick="Start()" style="color:forestgreen" class="btn btn-default" />
+</div>
+
+<div class="modal modal-scroll fade" id="Modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+<div class="modal-dialog modal-sm" role="document">
+    <div class="modal-content" style="background-color: #5cb85c">
+        <div class="modal-header" style="background-color: white; color: #5cb85c" id="headerModal">
+        </div>
+        <div class="modal-body" style="background-color: #5cb85c; color: white">
+            <div id="editDetails" @*style="text-align:center" *@></div>
+        </div>
+        <div id="modalEdit" class=" modal-footer"></div>
+    </div>
+</div>
+</div>
+
+
+<script>
+    function Start() {
+        var landmarks = $("#landmarks")[0].checked;
+        var clubs = $("#clubs")[0].checked;
+        var museums = $("#museums")[0].checked;
+        var interesting = $("#interesting")[0].checked;
+
+        if (!(landmarks || clubs || museums || interesting)) {
+            $("#editDetails").append("<p style='color:white'>You have to pick at least one of the things</p>");
+            $("#modalEdit").append("<button type='button' class='btn btn-default' onclick='CloseModal()'>OK</button>");
+            $("#Modal").modal("show");
+            return;
+        }
+
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            url: "/Home/Start",
+            data: { "landmarks": landmarks, "clubs": clubs, "museums": museums, "interesting": interesting },
+            chache: false,
+            success: function (data) {
+                window.location.replace("/Map/Index");              //novi kontroler treba !!!!!!!
+            },
+            error: function (err) {
+            }
+        });
+    }
+
+    function CloseModal() {
+        $("#editDetails").empty();
+        $("#modalEdit").empty();
+        $("#Modal").modal("hide");
+    }
+</script>
+
+
+
+
+

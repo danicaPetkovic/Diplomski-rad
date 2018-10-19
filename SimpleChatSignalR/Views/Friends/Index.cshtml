@@ -1,0 +1,191 @@
+﻿@model Baza.User
+@{
+    ViewBag.Title = "Index";
+    var ServerAddress = @Request.Url.Scheme + "://" + @Request.Url.Authority + @Request.ApplicationPath.TrimEnd('/');
+}
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<h2>Friends</h2>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div id="users" style="color:forestgreen">
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <div class="form-group">
+            @Html.LabelFor(model => model.Name, htmlAttributes: new { @class = "control-label col-xs-2" })
+            <div class="col-xs-8">
+                @Html.EditorFor(model => model.Name, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Name, "", new { @class = "text-danger" })
+            </div>
+            <div class="col-xs-2">
+                <button type="button" onclick="ShowUser()" class="btn btn-default" style="background-color:forestgreen"><span class="glyphicon glyphicon-search"></span></button>
+            </div>
+        </div>
+    </div>
+}
+
+<div id="searchUser"></div>
+
+<div id="friends" style="color:forestgreen; background-color:forestgreen; padding:2%; margin-top:20%; border-radius: 5% / 10%;"></div>
+
+<div class="modal modal-scroll fade" id="UserModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content" style="background-color: #5cb85c">
+            <div class="modal-header" style="background-color: white; color: #5cb85c" id="headerModal">
+            </div>
+            <div class="modal-body" style="background-color: #5cb85c; color: white">
+                <div id="editDetails" @*style="text-align:center" *@></div>
+            </div>
+            <div id="modalEdit" class=" modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function ModalClose() {
+        $("#headerModal").empty();
+        $("#editDetails").empty();
+        $("#modalEdit").empty();
+        $("#UserModal").modal("hide");
+    }
+
+    $('#Name').autocomplete({
+        source: '/Users_namesHendler.ashx',
+        appendTo: '#users',
+        select: function (event, ui) { AutocompleteUser() }
+    });
+
+
+    $.ajax({
+        type: "POST",
+        dataType: "json",
+        url: "/Friends/Friends",
+        chache: false,
+        success: function (data) {
+            for (var i = 0; i < data.length; i++) {
+                $("#friends").append("<div class='col-sm-8' style='background-color:#0D0F0C; margin:2%; border-radius: 2% / 10%'>" +
+                    "<img style='height:50px; width:50px' src='../Files/" + data[i].Image + "'>" +
+                    "<label style='margin-left:5%' >" + data[i].Name + " " + data[i].Surname + "</label>" +
+                    "<button style='float:right; margin:2%; margin-right:0%; color:forestgreen' type='button' id='" + data[i].Phone_number + "' class='btn btn-default' onclick='FriendDetails(this)'>More</button>" +
+                    "<input style='float:right; margin:2%; color:forestgreen' type='button' class='btn btn-default' id='" + data[i].Id_user + "' onclick='Chat(this)' value='Chat' />" + "</div> ");
+            }
+        },
+        error: function (err) {
+        }
+    });
+
+    function FriendDetails(data) {
+        var Image = $(data).parent("div")[0].children[0].currentSrc;
+        var nameSurname = $($(data).parent("div")[0].children[1])[0].textContent;
+        $("#headerModal").empty();
+        $("#editDetails").empty();
+        $("#modalEdit").empty();
+        $("#headerModal").append('<button type="button" class="close" data-dismiss="modal" onclick="ModalClose()" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
+            '<h2>Details</h2');
+        $("#editDetails").append("<img style='height:100px; width:100px' src='" + Image + "'>" +
+            "<div style='float:right;margin-top:-20%'><label class='col-sm-8' style='margin-left:10%' >" + nameSurname + "</label>" +
+            "<label class='col-sm-8' style='margin-left:10%' >" + data.id + "</label>" + "</div>");
+        $("#modalEdit").append("<input style='float:right; margin:2%; color:forestgreen' type='button' class='btn btn-default' onclick='FriendDelete(" + data.Id_user + ")' value='Delete'/>");
+        $("#UserModal").modal("show");
+    }
+
+    function FriendDelete(id) {
+        $("#headerModal").empty();
+        $("#headerModal").append('<button type="button" class="close" data-dismiss="modal" onclick="ModalClose()" aria-label="Close"><span aria-hidden="true">&times;</span></button>');
+        $("#editDetails").empty();
+        $("#modalEdit").empty();
+        $("#editDetails").append("<label>Are you sure you want to delete this friend?</label>" +
+            "<input style='float:right; margin:2%; color:forestgreen' type='button' class='btn btn-default' onclick='DeleteFriend(" + id + ")' value='Yes' />" +
+            "<input style='float:right; margin:2%; color:forestgreen' type='button' class='btn btn-default' onclick='ModalClose()' value='No' />" + "</div>");
+    }
+
+    function DeleteFriend(id) {
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: { "id": id },
+            url: "/Friends/DeleteFriend",
+            chache: false,
+            success: function (data) {
+            },
+            error: function (err) {
+            }
+        });
+        ModalClose();
+    }
+
+    function AutocompleteUser() {
+        var name = $("#Name").val();
+    }
+
+    function ShowUser() {
+        var name = $("#Name").val();
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: { "name": name },
+            url: "/Friends/FindUser",
+            chache: false,
+            success: function (data) {
+                $("#headerModal").empty();
+                $("#editDetails").empty();
+                $("#modalEdit").empty();
+                $("#headerModal").append('<button type="button" class="close" data-dismiss="modal" onclick="ModalClose()" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
+                    '<h2>Details</h2');
+                $("#editDetails").append("<div class='col-md-3'><img style='height:100px; width:100px' src='../Files/" + data.Image + "'></div>" +
+                    "<div style='float:right;margin-top:-20%' class='col-md-6'><label class='col-sm-8' style='margin-left:10%' >" + data.Name + " " + data.Surname + "</label></div>");
+                $("#modalEdit").append("<input style='float:right; margin:2%; color:forestgreen' type='button' class='btn btn-default' onclick='AddFriend(" + data.Id_user + ")' value='Add friend'/>");
+                $("#UserModal").modal("show");
+            },
+            error: function (err) {
+            }
+        });
+    }
+
+    function Chat(data) {
+        var recvImage = $(data).parent("div")[0].children[0].currentSrc;
+        var recvId = $(data)[0].id;
+        window.location.replace("/Friends/Chat?id=" + recvId + "&image=" + recvImage);
+    }
+
+    function AddFriend(id) {
+        @*$.ajax({
+            type: "POST",
+            dataType: "json",
+            data: { "id": id },
+            url: "/Friends/AddFriend",
+            chache: false,
+            success: function (data) {
+                var notificationHub = $.connection.notificationHub;
+                $.connection.hub.qs = { "userId": "@ViewBag.Id" };
+                $.connection.hub.start().done(function () {
+                    notificationHub.server.friendRequest(id);
+                });
+
+                $("#headerModal").empty();
+                $("#headerModal").append('<button type="button" class="close" data-dismiss="modal" onclick="ModalClose()" aria-label="Close"><span aria-hidden="true">&times;</span></button>');
+                $("#editDetails").empty();
+                $("#modalEdit").empty();
+                $("#editDetails").append("<label>Friend request sent :)</label>" +
+                    "<input style='float:right; margin:2%; color:forestgreen' type='button' class='btn btn-default' onclick='ModalClose()' value='OK' />" + "</div>");
+            },
+            error: function (err) {
+            }
+        });*@
+
+            var notificationHub = $.connection.notificationHub;
+                $.connection.hub.qs = { "userId": "@ViewBag.Id" };
+                $.connection.hub.start().done(function () {
+                    notificationHub.server.friendRequest(id);
+                });
+
+                $("#headerModal").empty();
+                $("#headerModal").append('<button type="button" class="close" data-dismiss="modal" onclick="ModalClose()" aria-label="Close"><span aria-hidden="true">&times;</span></button>');
+                $("#editDetails").empty();
+                $("#modalEdit").empty();
+                $("#editDetails").append("<label>Friend request sent :)</label>" +
+                    "<input style='float:right; margin:2%; color:forestgreen' type='button' class='btn btn-default' onclick='ModalClose()' value='OK' />" + "</div>");
+    }
+</script>

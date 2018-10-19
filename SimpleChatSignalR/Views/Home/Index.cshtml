@@ -1,0 +1,124 @@
+﻿@model Baza.User
+
+@{
+    ViewBag.Title = "Home-Index";
+}
+
+<div style="padding-top:1%;
+    background-image: url('../../Images/Nis.jpg') !important;
+    background-size: 100%;
+    background-repeat: no-repeat;
+    padding:50px;
+    background-attachment:scroll;">
+    <h2 style="color:white; text-align:center">Welcome to the attractions in the city of Nis</h2>
+</div>
+
+<div>
+    <label style="color:white">Let's explore Nis together!</label>
+</div>
+<div class="form-horizontal">
+    <div class="form-group">
+        <div class="col-sm-6">
+            <label style="color:forestgreen; text-align:center; font-size:10px; float:right">
+                You are wondering what to see, where to go, how to have fun?
+            </label>
+            <label style="color:forestgreen; text-align:center; font-size:10px; float:right">
+                We are the answer!
+            </label>
+        </div>
+        <div class="col-sm-6" style="float:left; margin-bottom:-10px; margin-top:10px">
+            <h4 style="color:white">SIGN IN</h4>
+        </div>
+    </div>
+</div>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div style="color:forestgreen">
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <div class="form-group">
+            @Html.LabelFor(model => model.Username, htmlAttributes: new { @class = "control-label col-xs-4" })
+            <div class="col-xs-8">
+                @Html.EditorFor(model => model.Username, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Username, "", new { @class = "text-danger" })
+            </div>
+        </div>
+        <br /><br />
+        <div class="form-group">
+            @Html.LabelFor(model => model.Password, htmlAttributes: new { @class = "control-label col-xs-4" })
+            <div class="col-xs-8">
+                @*@Html.PasswordFor(model => model.Password, new { htmlAttributes = new { @class = "form-control" } })*@
+                <input type="password" id="Password" class="form-control" />
+                @Html.ValidationMessageFor(model => model.Password, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-4 col-md-6" style="margin-left:40%; margin-right:40%; margin-top:12%">
+                <input type="button" value="Go!" style="color:forestgreen" onclick="Sign_in()" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+}
+
+<div class="form-horizontal">
+    <div class="form-group">
+        <div class="col-sm-6" style="float:right">
+            <label style="color:forestgreen; text-align:center; font-size:10px">
+                Please sign in, or create new account if you don't have one
+            </label>
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-6" style="float:right">
+                    <input type="button" style="color:forestgreen" onclick="Registration()" value="Create account" class=" btn btn-default" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<button onclick="notifyMe()">Notify me!</button>*@
+
+<script src="~/Scripts/jquery-1.10.2.min.js"></script>
+<script src="~/Scripts/jquery.validate.min.js"></script>
+<script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
+
+<script>
+    function Sign_in() {
+        var username = $("#Username").val();
+        var pass = $("#Password").val();
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            url: "/Home/Sign_in",
+            data: { "username": username, "password": pass },
+            chache: false,
+            success: function (data) {
+                if (!data.redirect) {
+                    window.location.replace("/Map/Index");
+                } else {
+                    window.location.replace("/Home/Main_page");
+                }
+            },
+            error: function (err) {
+            }
+        });
+    }
+
+    function Registration() {
+        window.location.replace("/Home/Registration");
+    }
+
+
+    // request permission on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!Notification) {
+            alert('Desktop notifications not available in your browser. Try Chromium.');
+            return;
+        }
+
+        if (Notification.permission !== "granted")
+            Notification.requestPermission();
+    });
+</script>
